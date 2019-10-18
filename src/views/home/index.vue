@@ -66,20 +66,25 @@
           </van-button>
         </van-cell>
        <van-grid :gutter="10">
+         <van-grid-item text="推荐" @click="switchChannel()"/>
           <van-grid-item
-            v-for="value in 8"
-            :key="value"
-            text="文字"
-          />
+            v-for="(channel,index) in channels"
+            :key="index"
+            :text="channel.name"
+            @click="onMyChannelClick(index)"
+          >
+           <van-icon v-show="isEditShow" class="close-icon" slot="icon" name="close" size="14px"/>
+         </van-grid-item>
         </van-grid>
 
         <van-cell title="推荐频道" :border="false">
         </van-cell>
        <van-grid :gutter="10">
           <van-grid-item
-            v-for="value in 8"
-            :key="value"
-            text="文字"
+            v-for="(channel,index) in remainingChannels"
+            :key="index"
+            :text="channel.name"
+            @click="onAddChannel(channel)"
           />
         </van-grid>
 
@@ -88,8 +93,10 @@
   </div>
 </template>
 <script>
-import { getDefaultChannels } from '@/api/channel'
+import { getUserOrDefaultChannels, getAllChannels } from '@/api/channel'
 import { getArticles } from '@/api/article'
+import { setItem, getItem } from '@/utils/storage'
+// import { async } from 'q'
 export default {
   name: 'HomeIndex',
   data () {
@@ -100,12 +107,35 @@ export default {
       list: [],
       loading: false,
       finished: false,
-      channels: [] // 频道列表
+      channels: [], // 频道列表
+      allChannels: []// 存储所有频道列表
+
     }
+  },
+  watch: {
+    // 函数名就是要坚挺的数据成员名称
+    channels (newValue) {
+      setItem('channels', newValue)
+    }
+  },
+  computed: {
+    remainingChannels () {
+      const channels = []
+      this.allChannels.forEach(channel => {
+        const index = this.channels.findIndex(item => item.id === channel.id)
+        if (index === -1) {
+          channels.push(channel)
+        }
+      })
+      return channels
+    }
+
   },
   created () {
     this.loadChannels()
+    this.loadAllChannels()
   },
+
   methods: {
     // 下拉刷新
     async onRefresh () {
@@ -165,8 +195,61 @@ export default {
       // }, 500)
     },
     async loadChannels () {
-      const { data } = await getDefaultChannels()
+      let channels = []
+      // 获取本地存储中的频道列表
+      const loadChannels = getItem('channels')
+      // 如果有本地存储的频道列表就用本地存储的频道列表
+      if (loadChannels) {
+        channels = loadChannels
+      } else {
+        // 如果没有就请求获取后台推荐的频道列表
+        const { data } = await getUserOrDefaultChannels()
+        channels = data.data.channels
+      }
+      this.extendData(channels)
+      // channels.forEach(channel => {
+      //   channel.articles = [] // 存储频道的文章列表
+      //   channel.finished = false // 存储频道的加载结束状态
+      //   channel.loading = false // 存储频道的加载更多 loading状态
+      //   channel.timestamp = null // 存储获取频道下一页的时间戳
+      //   channel.isPullDownLoading = false // 存储频道的下拉刷新 loading状态
+      // })
+      this.channels = channels
+    },
+    // 获取所有频道数据
+    async loadAllChannels () {
+      const { data } = await getAllChannels()
       const channels = data.data.channels
+      this.extendData(channels)
+      this.allChannels = channels
+      // channels.forEach(channel => {
+      //   const extendData = this.extendChannelData()
+      //   Object.assign(channel, extendData)
+      // })
+      // this.allChannels = channels
+    },
+    // 添加频道
+    onAddChannel (channel) {
+      this.channels.push(channel)
+    },
+    // 我的频道点击处理事件
+    onMyChannelClick (index) {
+      if (this.isEditShow) {
+        // 如果是编辑状态  删除频道
+        this.channels.splice(index, 1)
+      } else {
+        // 如果不是编辑状态 切换频道展示
+        this.switchChannel(index + 1)
+      }
+    },
+    // 切换频道
+    switchChannel (index) {
+      // 切换当前激活的频道
+      this.active = index
+      // 关闭频道弹层
+      this.isChannelShow = false
+    },
+    extendData (channels) {
       channels.forEach(channel => {
         channel.articles = [] // 存储频道的文章列表
         channel.finished = false // 存储频道的加载结束状态
@@ -174,7 +257,6 @@ export default {
         channel.timestamp = null // 存储获取频道下一页的时间戳
         channel.isPullDownLoading = false // 存储频道的下拉刷新 loading状态
       })
-      this.channels = channels
     }
   }
 }
@@ -200,6 +282,11 @@ export default {
         }
         .channel-container{
           padding-top: 30px;
+          .close-icon{
+            position: absolute;
+            top: -5px;
+            right: -5px;
+          }
         }
     }
 </style>
