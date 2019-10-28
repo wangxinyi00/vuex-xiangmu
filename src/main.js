@@ -8,6 +8,8 @@ import './styles/index.less'
 import { ValidationProvider, ValidationObserver, extend } from 'vee-validate'
 import zhCN from 'vee-validate/dist/locale/zh_CN' // 加载验证插件的语言包
 import * as rules from 'vee-validate/dist/rules'
+import fastClick from 'fastclick'
+
 // 按需注册 Vant 组件
 import {
   NavBar,
@@ -27,7 +29,12 @@ import {
   Image,
   Lazyload,
   Icon,
-  Popup
+  Popup,
+  Search,
+  Loading,
+  Dialog,
+  ActionSheet,
+  DatetimePicker
 } from 'vant'
 
 Vue
@@ -49,8 +56,14 @@ Vue
   .use(Lazyload)
   .use(Icon)
   .use(Popup)
+  .use(Search)
+  .use(Loading)
+  .use(Dialog)
+  .use(ActionSheet)
+  .use(DatetimePicker)
 Vue.config.productionTip = false
 
+fastClick.attach(document.body)
 // 配置使用中文
 for (let rule in rules) {
   extend(rule, {

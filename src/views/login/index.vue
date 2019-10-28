@@ -65,12 +65,16 @@ export default {
         console.log(data)
         // 先清除loading
         toast.clear()
-        this.$toast.success('登陆成功')
+
         // 登录成功，将数据存储到容器中
         this.$store.commit('setUser', data.data)
         // 为了防止页面书信数据丢失，将数据存到本地数据
         setItem('user', data.data)
 
+        this.$toast.success('登陆成功')
+
+        // 跳转到之前的页面或首页
+        this.$router.push(this.$route.query.redirect || '/')
       // 根据响应结果处理错误
       } catch (err) {
         toast.clear()

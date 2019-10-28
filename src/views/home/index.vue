@@ -1,7 +1,18 @@
 <template>
   <div class="home">
     <!-- 导航栏 -->
-    <van-nav-bar title="首页"  fixed/>
+    <van-nav-bar fixed>
+      <van-button
+      class="search-btn"
+      slot="title"
+      round
+      type="info"
+      size="small"
+      @click="$router.push('/search')"
+      >
+      搜索
+      </van-button>
+    </van-nav-bar>
     <!-- 频道列表 -->
     <van-tabs v-model="active">
       <van-tab :title="channel.name" v-for="channel in channels" :key="channel.id">
@@ -13,9 +24,15 @@
             @load="onLoad"
           >
             <van-cell
-              v-for="(article,index) in channel.articles"
-              :key="index"
+              v-for="article in channel.articles"
+              :key="article.art_id.toString()"
               :title="article.title"
+              @click="$router.push({
+                name:'article',
+                params:{
+                  articleId:article.art_id.toString()
+                }
+              })"
             >
             <div slot="label">
               <van-grid :border="false" :column-num="3">
@@ -66,7 +83,7 @@
           </van-button>
         </van-cell>
        <van-grid :gutter="10">
-         <van-grid-item text="推荐" @click="switchChannel()"/>
+         <van-grid-item text="推荐" @click="switchChannel(0)"/>
           <van-grid-item
             v-for="(channel,index) in channels"
             :key="index"
@@ -271,6 +288,11 @@ export default {
             .meta span{
                 margin-right: 10px;
             }
+        }
+        .search-btn{
+          width: 100%;
+          background-color: rgb(120, 203, 252);
+          color: #fff;
         }
         .wap-nav{
           position: sticky;

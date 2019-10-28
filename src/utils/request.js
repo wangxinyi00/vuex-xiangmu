@@ -1,6 +1,7 @@
 import axios from 'axios'
 import jsonBig from 'json-bigint'
 import store from '@/store'
+import router from '@/router'
 // axios.create 方法
 // 建议使用 create 方式，我们可以拥有
 // 说白了就是复制了一个 axios，拥有和 axios 完全一样的功能，但是配置可以不一样
@@ -20,10 +21,64 @@ request.interceptors.request.use(function (config) {
     // Authorization 是后端要求的名字，不能瞎写
     // 数据值 "Bearer空格token" 也是后端要求的数据格式，不能瞎写
     // 千万!千万!千万!注意，Bearer 和 token 之间的空格不能少
-    // config.headers['Authorization'] = `Bearer ${user.token}`
+    config.headers['Authorization'] = `Bearer ${user.token}`
   }
   return config
 }, function (error) {
   return Promise.reject(error)
 })
+
+// 响应拦截器
+request.interceptors.response.use(function (response) {
+  // <400 的状态码进入这里
+  return response
+}, async function (error) {
+  // >= 400 的状态码会进入这里
+  console.dir(error)
+  // 如果状态码是 401
+  if (error.response && error.response.status === 401) {
+    const { user } = store.state
+    if (!user) {
+      // 直接跳转登录页
+      router.push({
+        name: 'login',
+        query: {
+          redirect: router.currentRoute.fullPath
+        }
+      })
+    } else {
+      try {
+        // 请求获取新的token
+        const { data } = await axios({
+          method: 'PUT',
+          url: 'http://ttapi.research.itcast.cn/app/v1_0/authorizations',
+          headers: {
+            Authorization: `Bearer ${user.refresh_token}`
+          }
+        })
+
+        // 将最新的 token 替换原有 token
+        store.commit('setUser', {
+          token: data.data.token, // 最新获取的
+          refresh_token: user.refresh_token // 还是原来的
+        })
+
+        // 将原来失败的请求继续发出去
+        return request(error.config)
+      } catch (err) {
+        console.log(err)
+        // 刷新 token 也失败了，直接跳转到登录页
+        router.push({
+          name: 'login',
+          query: {
+            redirect: router.currentRoute.fullPath
+          }
+        })
+      }
+    }
+  }
+  // 如果有 refresh_token，则请求刷新 token
+  return Promise.reject(error)
+})
+// 导出这个请求对象，哪里需要发请求，哪里就加载使用
 export default request
